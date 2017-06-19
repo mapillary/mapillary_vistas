@@ -190,10 +190,12 @@ def reduce_evaluation_to_metalevel(labels, confusion_matrix, instance_specific_i
             if readable is None:
                 readable = old_label['readable']
 
-            new_instance_specific_information[new_name]['raw_true_positives'] += instance_specific_information[old_name]['raw_true_positives']
-            new_instance_specific_information[new_name]['weighted_true_positives'] += instance_specific_information[old_name]['weighted_true_positives']
-            new_instance_specific_information[new_name]['raw_false_negatives'] += instance_specific_information[old_name]['raw_false_negatives']
-            new_instance_specific_information[new_name]['weighted_false_negatives'] += instance_specific_information[old_name]['weighted_false_negatives']
+            # skip if no instance specific information is available
+            if old_name in instance_specific_information:
+                new_instance_specific_information[new_name]['raw_true_positives'] += instance_specific_information[old_name]['raw_true_positives']
+                new_instance_specific_information[new_name]['weighted_true_positives'] += instance_specific_information[old_name]['weighted_true_positives']
+                new_instance_specific_information[new_name]['raw_false_negatives'] += instance_specific_information[old_name]['raw_false_negatives']
+                new_instance_specific_information[new_name]['weighted_false_negatives'] += instance_specific_information[old_name]['weighted_false_negatives']
 
         id_mapping += [current_ids]
 

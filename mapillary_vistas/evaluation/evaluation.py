@@ -5,6 +5,7 @@ import itertools
 import pickle
 from multiprocessing.pool import Pool
 from pprint import pprint
+import warnings
 
 import numpy as np
 from PIL import Image
@@ -17,6 +18,7 @@ from mapillary_vistas.evaluation.confusion_matrix import reduce_evaluation_to_ev
 from mapillary_vistas.evaluation.confusion_matrix import reduce_evaluation_to_metalevel
 from mapillary_vistas.evaluation.instance_specific_pixel_level import calculate_instance_specific_pixel_accuracy_from_arrays
 from mapillary_vistas.evaluation.instance_specific_instance_level import calculate_instance_specific_instance_accuracy_from_arrays, calculate_average_precision
+
 
 def process_image(labels, files):
     """
@@ -48,6 +50,9 @@ def process_image(labels, files):
             ground_truth_instance_array = ground_truth_array
         else:
             ground_truth_label_array = ground_truth_array
+            warnings.warn("""You specified 8bit label files as ground truth.
+Please be aware that you will not get instance specific metrics in the output.
+Specify the 16bit instance files to get those.""", RuntimeWarning)
 
         confusion_matrix = calculate_confusion_matrix_from_arrays(
             prediction_array,
@@ -204,6 +209,13 @@ def evaluate_dirs(labels, args):
         pool.close()
         pool.join()
 
+    if len(instance_specific_instance_information) > 0:
+        print("Calculating instance specific accuracy")
+        precisions, precisions_50 = calculate_average_precision(instance_specific_instance_information, labels, args)
+    else:
+        precisions = None
+        precisions_50 = None
+
     # print the results according to command line parameters
     reduced_labels, reduced_confusion_matrix, reduced_instance_specific_pixel_information = reduce_evaluation_to_evaluated_categories(labels, confusion_matrix, instance_specific_pixel_information)
 
@@ -238,7 +250,5 @@ def evaluate_dirs(labels, args):
     print_confusion_matrix(meta_labels, meta_confusion_matrix, percent=percentage)
     print_ious(meta_labels, meta_confusion_matrix, meta_instance)
 
-    if len(instance_specific_instance_information) > 0:
-        print("Calculating instance specific accuracy")
-        precisions, precisions_50 = calculate_average_precision(instance_specific_instance_information, labels, args)
-        print_precisions(labels, precisions, precisions_50)
+        if len(instance_specific_instance_information) > 0:
+            print_precisions(labels, precisions, precisions_50)
