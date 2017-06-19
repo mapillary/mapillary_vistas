@@ -34,7 +34,7 @@ def main():
         '--prediction-labels',
         type=str,
         action='store',
-        required=True,
+        default=None,
         help="Path to the folder with predicted label data. "
              "(PNG files, file name must be exactly the same as ground truth data)")
 
@@ -43,7 +43,6 @@ def main():
         '--instances',
         type=str,
         action='store',
-        required=False,
         default=None,
         help="""Path to the folder with instance description.
 (TXT files, file name must be exactly the same as ground truth except for the extension)
@@ -107,11 +106,18 @@ Not specifying a number will use all available cores""")
     config = json.load(args.dataset_config)
     labels = config['labels']
 
-    if not os.path.isdir(args.prediction_labels):
+    if not args.prediction_labels and not args.instances:
+        raise RuntimeError("Give at least one of --prediction-labels or --instances")
+
+    if args.prediction_labels and not os.path.isdir(args.prediction_labels):
         raise RuntimeError("Prediction directory does not exist!")
 
+    if args.instances and not os.path.isdir(args.instances):
+        raise RuntimeError("Instance directory does not exist!")
+
     if not os.path.isdir(args.ground_truth_labels):
-        raise RuntimeError("Ground turth directory does not exist!")
+        raise RuntimeError("Ground truth directory does not exist!")
+
 
     evaluate_dirs(
         labels,

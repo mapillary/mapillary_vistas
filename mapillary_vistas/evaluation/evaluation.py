@@ -6,6 +6,7 @@ import pickle
 from multiprocessing.pool import Pool
 from pprint import pprint
 import warnings
+import traceback
 
 import numpy as np
 from PIL import Image
@@ -29,17 +30,9 @@ def process_image(labels, files):
     instance_specific_instance_information = None
     instance_specific_pixel_information = {}
     try:
-        if len(files) == 2:
-            # we have labels only
-            prediction_path, ground_truth_path = files
-            instance_predictions_path = None
-        else:
-            # we have instance masks too
-            prediction_path, ground_truth_path, instance_predictions_path = files
-
-        prediction_image = Image.open(prediction_path)
-        prediction_array = np.array(prediction_image)
-        assert prediction_array.dtype == np.uint8
+        ground_truth_path = files['ground_truth']
+        prediction_path = files['prediction']
+        instance_predictions_path = files['instances']
 
         ground_truth_image = Image.open(ground_truth_path)
         ground_truth_array = np.array(ground_truth_image)
@@ -50,30 +43,40 @@ def process_image(labels, files):
             ground_truth_instance_array = ground_truth_array
         else:
             ground_truth_label_array = ground_truth_array
-            warnings.warn("""You specified 8bit label files as ground truth.
-Please be aware that you will not get instance specific metrics in the output.
-Specify the 16bit instance files to get those.""", RuntimeWarning)
+            warn_text = """You specified 8bit label files as ground truth.
+It is not possible to derive instance specific metrics from these images.
+Specify the 16bit instance files."""
+            if instance_predictions_path is not None:
+                raise RuntimeError(warn_text)
+            else:
+                warnings.warn(warn_text, RuntimeWarning)
 
-        confusion_matrix = calculate_confusion_matrix_from_arrays(
-            prediction_array,
-            ground_truth_label_array,
-            len(labels)
-        )
+        if prediction_path is not None:
+            prediction_image = Image.open(prediction_path)
+            prediction_array = np.array(prediction_image)
+            assert prediction_array.dtype == np.uint8
 
-        if ground_truth_instance_array is not None:
-            instance_specific_pixel_information = calculate_instance_specific_pixel_accuracy_from_arrays(
+            confusion_matrix = calculate_confusion_matrix_from_arrays(
                 prediction_array,
-                ground_truth_instance_array,
-                labels
+                ground_truth_label_array,
+                len(labels)
             )
 
-        if instance_predictions_path is not None:
+            if ground_truth_instance_array is not None:
+                instance_specific_pixel_information = calculate_instance_specific_pixel_accuracy_from_arrays(
+                    prediction_array,
+                    ground_truth_instance_array,
+                    labels
+                )
+
+        if instance_predictions_path is not None and ground_truth_instance_array is not None:
             instance_specific_instance_information = calculate_instance_specific_instance_accuracy_from_arrays(
                 instance_predictions_path,
                 ground_truth_instance_array,
                 labels
             )
     except:
+        traceback.print_exc()
         print("problem in processing {}, {}".format(prediction_path, ground_truth_path))
         raise
 
@@ -95,7 +98,7 @@ def add_result(return_value, confusion_matrix, instance_specific_pixel_informati
     result, pixel_information, instance_information = return_value
     if confusion_matrix is None:
         confusion_matrix = result
-    else:
+    elif result is not None:
         confusion_matrix += result
 
     for label, values in pixel_information.items():
@@ -115,51 +118,48 @@ def evaluate_dirs(labels, args):
     Evaluate the given command line parameters and print/plot the results.
     """
 
-    prediction_dir = os.path.abspath(args.prediction_labels)
+    prediction_dir = None
+    if args.prediction_labels is not None:
+        prediction_dir = os.path.abspath(args.prediction_labels)
     ground_truth_label_dir = os.path.abspath(args.ground_truth_labels)
-    instance_dir = args.instances
+
+    instance_dir = None
+    if args.instances is not None:
+        instance_dir =  os.path.abspath(args.instances)
     jobs = args.jobs
 
     print("Parsing directories for images...")
     image_tuples = []
-    for (path, _, files) in os.walk(prediction_dir):
-        for prediction_file in files:
+    for (path, _, files) in os.walk(ground_truth_label_dir):
+        for ground_truth_file in files:
 
             # ignore non png predictions
-            if not prediction_file.endswith('.png'):
+            if not ground_truth_file.endswith('.png'):
                 continue
 
-            prediction_path = os.path.join(path, prediction_file)
-            ground_truth_label_path = prediction_path.replace(
-                prediction_dir,
-                ground_truth_label_dir
-            )
+            ground_truth_path = os.path.join(path, ground_truth_file)
 
-            # ignore predictions without ground truth
-            if not os.path.exists(ground_truth_label_path):
-                continue
-
-            # we found prediction and ground truth, now check for instances
-            if instance_dir is not None:
-                instance_path = prediction_path.replace(
+            prediction_path = None
+            if prediction_dir is not None:
+                prediction_path = ground_truth_path.replace(
+                    ground_truth_label_dir,
                     prediction_dir,
+                )
+
+            if instance_dir is not None:
+                instance_path = ground_truth_path.replace(
+                    ground_truth_label_dir,
                     instance_dir
                 )
                 instance_path = os.path.splitext(instance_path)[0] + '.txt'
             else:
-                instance_path = ""
+                instance_path = None
 
-            if instance_path != "" and os.path.exists(instance_path):
-                image_tuples.append((
-                    prediction_path,
-                    ground_truth_label_path,
-                    instance_path,
-                ))
-            else:
-                image_tuples.append((
-                    prediction_path,
-                    ground_truth_label_path,
-                ))
+            image_tuples.append({
+                'ground_truth': ground_truth_path,
+                'prediction': prediction_path,
+                'instances': instance_path,
+            })
 
     print("Found {} predictions with ground truth".format(len(image_tuples)))
 
@@ -212,43 +212,39 @@ def evaluate_dirs(labels, args):
     if len(instance_specific_instance_information) > 0:
         print("Calculating instance specific accuracy")
         precisions, precisions_50 = calculate_average_precision(instance_specific_instance_information, labels, args)
-    else:
-        precisions = None
-        precisions_50 = None
+        print_precisions(labels, precisions, precisions_50)
 
-    # print the results according to command line parameters
-    reduced_labels, reduced_confusion_matrix, reduced_instance_specific_pixel_information = reduce_evaluation_to_evaluated_categories(labels, confusion_matrix, instance_specific_pixel_information)
+    if confusion_matrix is not None:
+        # print the results according to command line parameters
+        reduced_labels, reduced_confusion_matrix, reduced_instance_specific_pixel_information = reduce_evaluation_to_evaluated_categories(labels, confusion_matrix, instance_specific_pixel_information)
 
-    if args.print_absolute_confusion_matrix:
-        percentage = False
-    else:
-        percentage = True
+        if args.print_absolute_confusion_matrix:
+            percentage = False
+        else:
+            percentage = True
 
-    if args.print_full_confusion_matrix:
-        labels_for_printing = labels
-        confusion_matrix_for_printing = confusion_matrix
-        instance_specific_information_for_printing = reduced_instance_specific_pixel_information
-    else:
-        labels_for_printing = reduced_labels
-        confusion_matrix_for_printing = reduced_confusion_matrix
-        instance_specific_information_for_printing = instance_specific_pixel_information
+        if args.print_full_confusion_matrix:
+            labels_for_printing = labels
+            confusion_matrix_for_printing = confusion_matrix
+            instance_specific_information_for_printing = reduced_instance_specific_pixel_information
+        else:
+            labels_for_printing = reduced_labels
+            confusion_matrix_for_printing = reduced_confusion_matrix
+            instance_specific_information_for_printing = instance_specific_pixel_information
 
-    if args.plot:
-        plot_confusion_matrix(labels, confusion_matrix, args.plot_dir, "confusion_matrix", args.plot_extension)
-    print_confusion_matrix(labels_for_printing, confusion_matrix_for_printing, percent=percentage)
-    print_ious(labels_for_printing, confusion_matrix_for_printing, instance_specific_information_for_printing)
+        if args.plot:
+            plot_confusion_matrix(labels, confusion_matrix, args.plot_dir, "confusion_matrix", args.plot_extension)
+        print_confusion_matrix(labels_for_printing, confusion_matrix_for_printing, percent=percentage)
+        print_ious(labels_for_printing, confusion_matrix_for_printing, instance_specific_information_for_printing)
 
-    meta_labels, meta_confusion_matrix, meta_instance = reduce_evaluation_to_metalevel(labels_for_printing, confusion_matrix_for_printing, instance_specific_information_for_printing, 2)
-    if args.plot:
-        plot_confusion_matrix(meta_labels, meta_confusion_matrix, args.plot_dir, "confusion_matrix_meta_2", args.plot_extension)
-    print_confusion_matrix(meta_labels, meta_confusion_matrix, percent=percentage)
-    print_ious(meta_labels, meta_confusion_matrix, meta_instance)
+        meta_labels, meta_confusion_matrix, meta_instance = reduce_evaluation_to_metalevel(labels_for_printing, confusion_matrix_for_printing, instance_specific_information_for_printing, 2)
+        if args.plot:
+            plot_confusion_matrix(meta_labels, meta_confusion_matrix, args.plot_dir, "confusion_matrix_meta_2", args.plot_extension)
+        print_confusion_matrix(meta_labels, meta_confusion_matrix, percent=percentage)
+        print_ious(meta_labels, meta_confusion_matrix, meta_instance)
 
-    meta_labels, meta_confusion_matrix, meta_instance = reduce_evaluation_to_metalevel(labels_for_printing, confusion_matrix_for_printing, instance_specific_information_for_printing, 1)
-    if args.plot:
-        plot_confusion_matrix(meta_labels, meta_confusion_matrix, args.plot_dir, "confusion_matrix_meta_1", args.plot_extension)
-    print_confusion_matrix(meta_labels, meta_confusion_matrix, percent=percentage)
-    print_ious(meta_labels, meta_confusion_matrix, meta_instance)
-
-        if len(instance_specific_instance_information) > 0:
-            print_precisions(labels, precisions, precisions_50)
+        meta_labels, meta_confusion_matrix, meta_instance = reduce_evaluation_to_metalevel(labels_for_printing, confusion_matrix_for_printing, instance_specific_information_for_printing, 1)
+        if args.plot:
+            plot_confusion_matrix(meta_labels, meta_confusion_matrix, args.plot_dir, "confusion_matrix_meta_1", args.plot_extension)
+        print_confusion_matrix(meta_labels, meta_confusion_matrix, percent=percentage)
+        print_ious(meta_labels, meta_confusion_matrix, meta_instance)
