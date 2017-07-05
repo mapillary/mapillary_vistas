@@ -233,7 +233,7 @@ def evaluate_dirs(labels, args):
             instance_specific_information_for_printing = instance_specific_pixel_information
 
         if args.plot:
-            plot_confusion_matrix(labels, confusion_matrix, args.plot_dir, "confusion_matrix", args.plot_extension)
+            plot_confusion_matrix(labels_for_printing, confusion_matrix_for_printing, args.plot_dir, "confusion_matrix", args.plot_extension)
         print_confusion_matrix(labels_for_printing, confusion_matrix_for_printing, percent=percentage)
         print_ious(labels_for_printing, confusion_matrix_for_printing, instance_specific_information_for_printing)
 
