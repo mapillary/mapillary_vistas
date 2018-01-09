@@ -25,7 +25,7 @@ def calculate_confusion_matrix_from_arrays(prediction, ground_truth, nr_labels):
         bins=(nr_labels, nr_labels),
         range=[(0, nr_labels), (0, nr_labels)]
     )
-    confusion_matrix = confusion_matrix.astype(np.uint32)
+    confusion_matrix = confusion_matrix.astype(np.uint64)
     return confusion_matrix
 
 
@@ -208,7 +208,7 @@ def reduce_evaluation_to_metalevel(labels, confusion_matrix, instance_specific_i
         })
 
     nr_labels = len(new_labels)
-    reduced_confusion_matrix = np.zeros((nr_labels, nr_labels), dtype=np.uint32)
+    reduced_confusion_matrix = np.zeros((nr_labels, nr_labels), dtype=np.uint64)
     for i, j in itertools.product(range(nr_labels), range(nr_labels)):
         reduced_confusion_matrix[i, j] = confusion_matrix[id_mapping[i], :][:, id_mapping[j]].sum()
 
