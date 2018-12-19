@@ -1,0 +1,33 @@
+{
+    "description": "Mapillary vistas supporting code",
+    "frameworks": ["java"],
+    "language": "java",
+    "maintainers": [
+        "tobias-o"
+    ],
+    "providers": [
+        {
+            "name": "mapillary_vistas",
+            "dockerparameters":{
+                "environment": []
+            },
+            "apis": [
+            ],
+            "config_vars": [
+            ],
+            "dependencies": [
+            ],
+            "description": "Vistas code",
+            "extDependencies": [
+            ],
+            "services": [
+                {
+                    "name": "mapillary_vistas",
+                    "description": "TBD"
+                }
+            ],
+            "type": "aws_lamba"
+        }
+    ],
+    "repo": "mapillary_vistas"
+}
