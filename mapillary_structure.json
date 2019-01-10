@@ -1,7 +1,7 @@
 {
     "description": "Mapillary vistas supporting code",
-    "frameworks": ["java"],
-    "language": "java",
+    "frameworks": [],
+    "language": "python",
     "maintainers": [
         "tobias-o"
     ],
@@ -22,11 +22,11 @@
             ],
             "services": [
                 {
-                    "name": "mapillary_vistas",
-                    "description": "TBD"
+                    "name": "mapillary_vistas_scripts",
+                    "description": "Collection of scripts to evaluate semantic segmentation results on MVD"
                 }
             ],
-            "type": "aws_lamba"
+            "type": "script"
         }
     ],
     "repo": "mapillary_vistas"
