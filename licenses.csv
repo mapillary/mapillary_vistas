@@ -1,12 +1,13 @@
-Pillow, 4.1.1, "Standard PIL License"
+Pillow, 7.0.0, HPND
 cycler, 0.10.0, BSD
-matplotlib, 2.0.2, BSD
-numpy, 1.12.1, BSD
-olefile, 0.45.1, BSD
-pyparsing, 2.2.0, MIT
-python-dateutil, 2.2, "Simplified BSD"
-pytz, 2018.3, MIT
-scikit-learn, 0.18.1, "New BSD"
-scipy, 0.19.0, BSD
+joblib, 0.13.2, BSD
+kiwisolver, 1.1.0, BSD
+matplotlib, 3.2.0, "Python Software Foundation License"
+numpy, 1.18.1, BSD
+pyparsing, 2.4.6, MIT
+python-dateutil, 2.6.0, "Simplified BSD"
+scikit-learn, 0.22.2, "New BSD"
+scipy, 1.4.1, BSD
+setuptools, 46.0.0, MIT
 six, 1.11.0, MIT
-tqdm, 4.11.2, "MPLv2.0, MIT Licences"
+tqdm, 4.43.0, "MPLv2.0, MIT Licences"
