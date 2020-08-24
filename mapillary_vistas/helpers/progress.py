@@ -1,3 +1,5 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+
 try:
     from tqdm import tqdm as progress
 except ImportError:

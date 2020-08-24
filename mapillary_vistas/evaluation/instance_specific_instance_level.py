@@ -1,3 +1,5 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+
 """
     This file is responsible for the instance specific evaluation metric.
     It extracts the information from ground truth and prediction masks,

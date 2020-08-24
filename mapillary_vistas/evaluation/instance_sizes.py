@@ -1,3 +1,5 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+
 """
     This file contains the average instance size for MVD.
 """
