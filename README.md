@@ -43,6 +43,11 @@ Based on these assignments we generate a precision-recall curve for each label.
 The average precision corresponds to the area under curve of the plot.
 Similar to [2,4], we calculate the main metric, AP, by using thresholds from 50% to 95% in 5% steps and finally average the individual APs.
 
+## License
+
+By contributing to mapillary_vistas, you agree that your contributions will be licensed
+under the LICENSE file in the root directory of this source tree.
+
 ## References
 
 [1] M. Everingham, L. Van Gool, C. K. I. Williams, J. Winn and A. Zisserman. The PASCAL Visual Object Classes (VOC) Challenge. In _International Journal of Computer Vision_ (IJCV), 2010.
